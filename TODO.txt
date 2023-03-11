@@ -1,0 +1,1 @@
+1. ability to work with pipes,variable names, and files encountered as arguments
