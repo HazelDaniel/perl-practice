@@ -1,9 +1,9 @@
-NAME
+### NAME
        parseFile - read a file's content
-SYNOPSIS
+### SYNOPSIS
        parseFile [OPTION]... [FILE]...
 
-DESCRIPTION
+### DESCRIPTION
        send a file's content to STDOUT (the cli by default). translate entries based on any combination of -nlu specified.
 
        No support for long options yet.
@@ -13,7 +13,7 @@ DESCRIPTION
        -l, print file's content in lower case.
        -u, print file's content in upper case.
 
-AUTHOR
+### AUTHOR
        HAZEL DANIEL.
        
        Report bugs at https://github.com/HazelDaniel/perl-practice/issues.
