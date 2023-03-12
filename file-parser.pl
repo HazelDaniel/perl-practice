@@ -22,7 +22,9 @@ sub parse_and_chomp {
   @vecs = @_;
   my $arg1 = $vecs[0];
   my $arg2 = $vecs[1];
-
+  #foreach $vec (@vecs) {
+  #  print "$vec\n";
+  #}
   open(MYINPUTFILE, $vecs[0]) or die "can't open: $!";
   while(<MYINPUTFILE>)
   {
@@ -37,6 +39,11 @@ sub parse_and_chomp {
 
 }
 
+sub multi_parse_and_chomp {
+  for($i = 0; $i < $parameters; $i++) {
+    parse_and_chomp($ARGV[$i]);
+  }
+}
 sub print_lines {
   my @args = @_;
   $l_count = 0;
@@ -72,55 +79,78 @@ sub print_lines {
 if($parameters == 1) {
   # parseFile [FILE]
   $file_name = $ARGV[0];
-  parse_and_chomp($file_name);
+  multi_parse_and_chomp();
   print_lines();
 }
-
-if($parameters == 2) {
+elsif($parameters == 2) {
   # parseFile [...OPTIONS] [FILE]
+ 
   my $file_opt = $ARGV[0];
   my @opt_list = split(/(?=[[:graph:]])(?<=[[:graph:]])/,$file_opt);
   $file_name = $ARGV[1];
- 
-  #ERROR HANDLING
-  if(not grep(/^-[^\s-]+$/,$file_opt)) {
-    print "error: invalid option syntax!";
-    exit 1;
-  }
-  if(grep(/([[:alpha:]])\1/,$file_opt)) {
-    print "error: recurring options!";
-    exit 1;
-  }
-  if(grep(/lu/,$file_opt) or grep(/ul/,$file_opt)) {
-    print "error: logically conflicting options!";
-    exit 1;
-  }
-  if(grep(/[[:digit:]]/,$file_opt)) {
-    print "error: invalid option syntax!";
-    exit 1;
-  }
-  #END OF ERROR HANDLING
+  my $opt_len = scalar(@opt_list);
+  # To make sure that these are not 2 or 3-length file names , that they are indeed options
+  if(($opt_len == 3 or $opt_len == 2) and (index (join("",@opt_list),'-') eq 0)) {
+    #ERROR HANDLING
+    if(not grep(/^-[^\s-]+$/,$file_opt)) {
+      print "error: invalid option syntax! 1";
+      exit 1;
+    }
+    if(grep(/([[:alpha:]])\1/,$file_opt)) {
+      print "error: recurring options!";
+      exit 1;
+    }
+    if(grep(/lu/,$file_opt) or grep(/ul/,$file_opt)) {
+      print "error: logically conflicting options!";
+      exit 1;
+    }
+    if(grep(/^-.*[[:digit:]]/,$file_opt)) {
+      print "error: invalid option syntax!"; exit 1;
+    }
+    #END OF ERROR HANDLING
 
-  parse_and_chomp($file_name);
+    parse_and_chomp($file_name);
 
-  if(grep(/n/,@opt_list) and grep(/u/,@opt_list)) {
-    print_lines($f_property{'nu'});
+    if(grep(/n/,@opt_list) and grep(/u/,@opt_list)) {
+      print_lines($f_property{'nu'});
+    }
+    elsif(grep(/n/,@opt_list) and grep(/l/,@opt_list)) {
+      print_lines($f_property{'nl'});
+    }
+    elsif(grep(/n/,@opt_list)) {
+      print_lines($f_property{'n'});
+    }
+    elsif(grep(/u/,@opt_list)) {
+      print_lines($f_property{'u'});
+    }
+    elsif(grep(/l/,@opt_list)) {
+      print_lines($f_property{'l'});
+    }
+
   }
-  elsif(grep(/n/,@opt_list) and grep(/l/,@opt_list)) {
-    print_lines($f_property{'nl'});
-  }
-  elsif(grep(/n/,@opt_list)) {
-    print_lines($f_property{'n'});
-  }
-  elsif(grep(/u/,@opt_list)) {
-    print_lines($f_property{'u'});
-  }
-  elsif(grep(/l/,@opt_list)) {
-    print_lines($f_property{'l'});
+  else {
+    # multi_parse_and_chomp();
+    # print_lines();
+    print "";
   }
 
-  foreach $opt_char (@opt_list) {
-    print "$opt_char\n";
-  }
-
+  #  foreach $opt_char (@opt_list) {
+  #  print "$opt_char\n";
+  #
 }
+else {
+  print "entered multiple file mode";
+  multi_parse_and_chomp();
+  print_lines();
+}
+
+
+=for
+
+EDGE CASES:
+  when parameter length satisfies the above checks but due to a pathname expansion or a command substitution
+  when pathname expands to n parameters
+  when pathname expands to n parameters and options are provided
+  when pathname expands to n parameters and long options are provided
+
+=cut
