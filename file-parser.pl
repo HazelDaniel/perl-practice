@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+use Term::ANSIColor qw(:constants);
 
 =for
   ====== WELCOME TO MY LITTLE PROJECT! ======
@@ -22,9 +23,6 @@ sub parse_and_chomp {
   @vecs = @_;
   my $arg1 = $vecs[0];
   my $arg2 = $vecs[1];
-  #foreach $vec (@vecs) {
-  #  print "$vec\n";
-  #}
   open(MYINPUTFILE, $vecs[0]) or die "can't open: $!";
   while(<MYINPUTFILE>)
   {
@@ -40,7 +38,11 @@ sub parse_and_chomp {
 }
 
 sub multi_parse_and_chomp {
-  for($i = 0; $i < $parameters; $i++) {
+  my $i;
+  my @args = @_;
+  my $arg_offset = $args[0];
+  $i = $arg_offset ? $i + $arg_offset : 0;
+  for(; $i < $parameters; $i++) {
     parse_and_chomp($ARGV[$i]);
   }
 }
@@ -48,7 +50,9 @@ sub print_lines {
   my @args = @_;
   $l_count = 0;
   my $arg1 = $args[0];
-  
+
+  print CYAN,"TOTAL LINES: " . scalar(@file_lines) . "\n",RESET;
+
   foreach $f_line (@file_lines) {
     if($arg1 eq "numbered") {
       $l_count += 1;
@@ -74,11 +78,56 @@ sub print_lines {
   }
 
 }
+
+sub handle_opt_error {
+  my @args = @_;  
+  my $file_opt = $args[0];
+#ERROR HANDLING
+  if(not grep(/^-[^\s-]+$/,$file_opt)) {
+     print "error: invalid option syntax! 1";
+     exit 1;
+  }
+  if(grep(/([[:alpha:]])\1/,$file_opt)) {
+    print "error: recurring options!";
+    exit 1;
+  }
+  if(grep(/lu/,$file_opt) or grep(/ul/,$file_opt)) { print "error: logically conflicting options!";
+    exit 1;
+  }
+  if(grep(/^-.*[[:digit:]]/,$file_opt)) {
+    print "error: invalid option syntax!"; exit 1;
+  }
+#END OF ERROR HANDLING
+}
+
+sub eval_file_opt {
+  my @args = @_;
+  my @opt_list = @args;
+  if(grep(/n/,@opt_list) and grep(/u/,@opt_list)) {
+    print_lines($f_property{'nu'});
+  }
+  elsif(grep(/n/,@opt_list) and grep(/l/,@opt_list)) {
+    print_lines($f_property{'nl'});
+  }
+  elsif(grep(/n/,@opt_list)) {
+    print_lines($f_property{'n'});
+  }
+  elsif(grep(/u/,@opt_list)) {
+    print_lines($f_property{'u'});
+  }
+  elsif(grep(/l/,@opt_list)) {
+    print_lines($f_property{'l'});
+  }
+}
 #END OF SUB-ROUTINES
 
 if($parameters == 1) {
   # parseFile [FILE]
   $file_name = $ARGV[0];
+  if(grep(/^-.*/,$file_name)) {
+    print "invalid single argument!\n";
+    exit 1;
+  }
   multi_parse_and_chomp();
   print_lines();
 }
@@ -91,57 +140,41 @@ elsif($parameters == 2) {
   my $opt_len = scalar(@opt_list);
   # To make sure that these are not 2 or 3-length file names , that they are indeed options
   if(($opt_len == 3 or $opt_len == 2) and (index (join("",@opt_list),'-') eq 0)) {
-    #ERROR HANDLING
-    if(not grep(/^-[^\s-]+$/,$file_opt)) {
-      print "error: invalid option syntax! 1";
-      exit 1;
-    }
-    if(grep(/([[:alpha:]])\1/,$file_opt)) {
-      print "error: recurring options!";
-      exit 1;
-    }
-    if(grep(/lu/,$file_opt) or grep(/ul/,$file_opt)) {
-      print "error: logically conflicting options!";
-      exit 1;
-    }
-    if(grep(/^-.*[[:digit:]]/,$file_opt)) {
-      print "error: invalid option syntax!"; exit 1;
-    }
-    #END OF ERROR HANDLING
-
-    parse_and_chomp($file_name);
-
-    if(grep(/n/,@opt_list) and grep(/u/,@opt_list)) {
-      print_lines($f_property{'nu'});
-    }
-    elsif(grep(/n/,@opt_list) and grep(/l/,@opt_list)) {
-      print_lines($f_property{'nl'});
-    }
-    elsif(grep(/n/,@opt_list)) {
-      print_lines($f_property{'n'});
-    }
-    elsif(grep(/u/,@opt_list)) {
-      print_lines($f_property{'u'});
-    }
-    elsif(grep(/l/,@opt_list)) {
-      print_lines($f_property{'l'});
-    }
-
+    handle_opt_error($file_opt);
+    multi_parse_and_chomp(1);
+    eval_file_opt(@opt_list);
+  }
+  # In cases where they are results of pathname expansions and their names are not preceeded by -
+  elsif (not (grep(/^-.*/,$ARGV[0]) or grep (/^-.*/,$ARGV[1]))) {
+    multi_parse_and_chomp();
+    print_lines();
   }
   else {
-    # multi_parse_and_chomp();
-    # print_lines();
-    print "";
+    print "error: \n.1 unrecognizable synopsis specified 2-parameter mode\n\t check the man page for guide or visit our official documentation at https://github.com:HazelDaniel/perl-practice\n";
   }
 
-  #  foreach $opt_char (@opt_list) {
-  #  print "$opt_char\n";
-  #
 }
 else {
-  print "entered multiple file mode";
-  multi_parse_and_chomp();
-  print_lines();
+  # multiple file mode with/without options:
+  # ERROR HANDLING
+  if(grep (/^((?<=\b)\w[[:graph:]]*\s?)+$/,"@ARGV")) {
+    # no options are provided. only pathname expansions or file lists
+    print "parameter expansions only!";
+    multi_parse_and_chomp();
+    print_lines();
+  }elsif(grep (/^(-[[:alpha:]]{1,2}\s)?((?<=\b)\w[[:graph:]]*\s?)+$/,"@ARGV")) {
+    # options are provided alongside file lists or expanded pathnames 
+    my $file_opt = $ARGV[0];
+    my @opt_list = split(/(?=[[:graph:]])(?<=[[:graph:]])/,$file_opt);
+    $file_name = $ARGV[1];
+    my $opt_len = scalar(@opt_list);
+    multi_parse_and_chomp(1);
+    eval_file_opt(@opt_list);
+  }
+  else {
+    print"error: \n.1 unrecognizable synopsis specified multi-parameter mode\n\t check the man page for guide or visit our official documentation at https://github.com:HazelDaniel/perl-practice\n";
+    exit;
+  }
 }
 
 
