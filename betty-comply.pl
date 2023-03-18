@@ -2,7 +2,7 @@
 use Term::ANSIColor qw(:constants);
 
 =for
-  ====== WELCOME TO MY LITTLE PROJECT! ======
+====== WELCOME TO MY LITTLE PROJECT! ======
   DESCRIPTION : BASIC FILE PROCESSING PROGRAM WRITTEN IN PERL.
 =cut
 
@@ -14,7 +14,7 @@ $parameters = $#ARGV + 1;
 #END OF GLOBALS
 
 #SUB-ROUTINES
-sub parse_and_chomp {
+sub parse_and_format {
   my $args = scalar(@_);
   if($args != 1){
     print "Wrong argument in subroutine!";
@@ -38,46 +38,14 @@ sub parse_and_chomp {
 
 }
 
-sub multi_parse_and_chomp {
+sub multi_parse_and_format {
   my $i;
   my @args = @_;
   my $arg_offset = $args[0];
   $i = $arg_offset ? $i + $arg_offset : 0;
   for(; $i < $parameters; $i++) {
-    parse_and_chomp($ARGV[$i]);
+    parse_and_format($ARGV[$i]);
   }
-}
-sub print_lines {
-  my @args = @_;
-  $l_count = 0;
-  my $arg1 = $args[0];
-
-  print CYAN,"TOTAL LINES: " . scalar(@file_lines) . "\n",RESET;
-
-  foreach $f_line (@file_lines) {
-    if($arg1 eq "numbered") {
-      $l_count += 1;
-      print "$l_count. $f_line\n";
-    }
-    elsif($arg1 eq "numbered-and-upper") {
-      $l_count += 1;
-      print uc("$l_count. $f_line\n");
-    }
-    elsif($arg1 eq "upper") {
-      print uc("$f_line\n");
-    }
-    elsif($arg1 eq "numbered-and-lower") {
-      $l_count += 1;
-      print lc("$l_count. $f_line\n");
-    }
-    elsif($arg1 eq "lower") {
-      print lc("$f_line\n");
-    }
-    else {
-      print "$f_line\n";
-    }
-  }
-
 }
 
 sub handle_opt_error {
@@ -104,22 +72,21 @@ sub handle_opt_error {
 sub eval_file_opt {
   my @args = @_;
   my @opt_list = @args;
-  if(grep(/n/,@opt_list) and grep(/u/,@opt_list)) {
-    print_lines($f_property{'nu'});
-  }
-  elsif(grep(/n/,@opt_list) and grep(/l/,@opt_list)) {
-    print_lines($f_property{'nl'});
-  }
-  elsif(grep(/n/,@opt_list)) {
-    print_lines($f_property{'n'});
-  }
-  elsif(grep(/u/,@opt_list)) {
-    print_lines($f_property{'u'});
-  }
-  elsif(grep(/l/,@opt_list)) {
-    print_lines($f_property{'l'});
-  }
+
 }
+
+sub validate_opt_length {
+  my ($file_opt, $opt_len, @opt_list) = @_;
+  printf "args: @_\n";
+  print " file opt: $file_opt\n opt list: @opt_list\n opt len : $opt_len\n"
+  #if(($opt_len == 3 or $opt_len == 2) and (index (join("",@opt_list),'-') eq 0)) {
+   #handle_opt_error($file_opt);
+   #multi_parse_and_format(1);
+   #eval_file_opt(@opt_list);
+   #print "two parameter argument including options\n";
+   #}
+}
+
 #END OF SUB-ROUTINES
 
 if($parameters == 1) {
@@ -129,8 +96,8 @@ if($parameters == 1) {
     print "invalid single argument!\n";
     exit 1;
   }
-  multi_parse_and_chomp();
-  print_lines();
+  multi_parse_and_format();
+  print "one parameter argument\n";
 }
 elsif($parameters == 2) {
   # parseFile [...OPTIONS] [FILE]
@@ -140,21 +107,17 @@ elsif($parameters == 2) {
   $file_name = $ARGV[1];
   my $opt_len = scalar(@opt_list);
   # To make sure that these are not 2 or 3-length file names , that they are indeed options
+  validate_opt_length($file_opt, $opt_len, @opt_list);
   if(($opt_len == 3 or $opt_len == 2) and (index (join("",@opt_list),'-') eq 0)) {
     handle_opt_error($file_opt);
-    multi_parse_and_chomp(1);
+    multi_parse_and_format(1);
     eval_file_opt(@opt_list);
-  }
-  elsif (grep(/^--[[:graph:]]+/,$ARGV[0])) {
-      # parseFile [--...LONG-OPTIONS] [FILE]
-      my $opt_text = grep(/(?<=-)(?=[[:alpha:]])[[:alpha:]]+(?==)/,@opt_list);
-      print "option text: $opt_text\n";
-      print "@opt_list\n";
+    print "two parameter argument including options\n";
   }
   # In cases where they are results of pathname expansions and their names are not preceeded by -
   elsif (not (grep(/^-.*/,$ARGV[0]) or grep (/^-.*/,$ARGV[1]))) {
-    multi_parse_and_chomp();
-    print_lines();
+    multi_parse_and_format();
+    print "pathname expanded";
   }
   else {
     print "error: \n.1 unrecognizable synopsis specified 2-parameter mode\n\t check the man page for guide or visit our official documentation at https://github.com:HazelDaniel/perl-practice\n";
@@ -166,17 +129,45 @@ else {
   # ERROR HANDLING
   if(grep (/^((?<=\b)\w[[:graph:]]*\s?)+$/,"@ARGV")) {
     # no options are provided. only pathname expansions or file lists
-    print "parameter expansions only!";
-    multi_parse_and_chomp();
-    print_lines();
+    multi_parse_and_format();
+    print "multi parameter argument (pathnames only)\n";
+
   }elsif(grep (/^(-[[:alpha:]]{1,2}\s)?((?<=\b)\w[[:graph:]]*\s?)+$/,"@ARGV")) {
     # options are provided alongside file lists or expanded pathnames 
     my $file_opt = $ARGV[0];
     my @opt_list = split(/(?=[[:graph:]])(?<=[[:graph:]])/,$file_opt);
     $file_name = $ARGV[1];
     my $opt_len = scalar(@opt_list);
-    multi_parse_and_chomp(1);
+    multi_parse_and_format(1);
     eval_file_opt(@opt_list);
+    print "multi parameter argument (options provided)\n";
+  }
+  elsif (grep(/^--[[:graph:]]+/,$ARGV[1])) {
+    # parseFile [...OPTIONS] [--...LONG-OPTIONS] [FILE]
+    
+    my $file_opt = $ARGV[0];
+    my @opt_list = split(/(?=[[:graph:]])(?<=[[:graph:]])/,$file_opt);
+    my $opt_len = scalar(@opt_list);
+    validate_opt_length($file_opt, $opt_len, @opt_list);
+    # a repeated validation logic about to happen. why not find a way to export that into a re-usable function
+    my $file_param = $ARGV[1];
+    my @param_list = split(/(?=[[:graph:]])(?<=[[:graph:]])/,$file_param);
+    my $param_string = join("",@param_list);
+    my @param_text_naive = split(/(?<=--)(?=[[:alpha:]])/,$param_string);
+    my @param_text = split(/(?==)/,$param_text_naive[1]);
+    my $param = $param_text[0];
+    my $param_val_naive = $param_text[1];
+    my @param_val = split(/((?<==)(?=[[:alnum:]])|(?<==)(?=\'))/,$param_val_naive);
+    my $val = $param_val[2];
+    print "param val naive : $param_val_naive\n";
+    print "param text: $param\n";
+    print "param val: $val\n";
+    print "long parameter argument\n";
+
+    if (not $val) {
+      print "no parameter value provided\n";
+      exit 1;
+    }
   }
   else {
     print"error: \n.1 unrecognizable synopsis specified multi-parameter mode\n\t check the man page for guide or visit our official documentation at https://github.com:HazelDaniel/perl-practice\n";
