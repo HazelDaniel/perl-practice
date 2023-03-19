@@ -27,11 +27,9 @@ sub parse_and_format {
   open(MYINPUTFILE, $vecs[0]) or die "can't open: $!";
   while(<MYINPUTFILE>)
   {
-    # Good practice to store $_ value because
-    # subsequent operations may change it.
+    # Good practice to store $_ value
     my($line) = $_;
 
-    # Good practice to always strip the trailing newline from the line.
     chomp($line);
     push(@file_lines,$line);
   }
@@ -61,8 +59,13 @@ sub format_trailing {
   my $l_count = 0;
   for my $f_line (@file_lines) {
     if ($f_line =~ /^[[:print:]]+(?={$)/ and $' eq '{') {
-      $f_line =~ s/{$/\n\{/m;
-      $file_lines[$l_count] = $f_line;
+      if(not grep /^\s*((\}?\s*else)|do)\s*\{\s*$/,$f_line) {
+        $f_line =~ s/{$/\n\{/m;
+        $file_lines[$l_count] = $f_line;
+      }
+      elsif($f_line =~ /^\s*((\}?\s*else)|do)\s*\{\s*$/mg) {
+        $f_line =~ s/\{[[:blank:]]*$/\{\n/m;
+      }
     }
     $l_count++;
   }
@@ -90,9 +93,29 @@ sub adjust_indent {
         $ind_level++;
         print "indentation level: $ind_level:$f_line\n";
       }
+      elsif($f_line =~ /^\s*(do)\s*(\{)\s*$/mg) {
+        my $statement = $1 . " " . $2;
+        $file_lines[$i] = ($ind_char x $ind_level) . $statement;
+        $ind_level++;
+        print "found a do while or else\n";
+        print "statement: $statement\n";
+        print "indentation level: $ind_level:$f_line\n";
+      }
+      elsif($f_line =~ /\s*(\})\s*(while)\s*([[:graph:]]+;)$/mg) {
+        my $statement = $1 . " " . $2 . " " . $3; 
+        $ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
+        $file_lines[$i] = ($ind_char x $ind_level) . $statement;
+        print "indentation level: $ind_level:$f_line\n";
+      }
+      elsif($f_line =~ /^\s*(\})\s*(else)\s*(\{)\s*$/mg) {
+        my $statement = $1 . " " . $2 . " " . $3; 
+        $adjust_ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
+        $file_lines[$i] = ($ind_char x $adjust_ind_level) . $statement;
+        print "indentation level: $ind_level:$f_line\n";
+      }
       elsif($f_line !~ /(^[[:blank:]]*(?={))({)[[:blank:]]*$/mg and $f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
         if($f_line =~ /^[[:blank:]]*([[:print:]]+(;|\)|:))/mg) {
-          $statement = $1;
+          my $statement = $1;
           $file_lines[$i] = ($ind_char x $ind_level) . $statement;
           print "statement: $statement\n";
           print "indentation level: $ind_level:$f_line\n";
