@@ -38,6 +38,58 @@ sub parse_and_format {
 
 }
 
+sub print_parsed_lines {
+  for my $file (@file_lines) {
+    print "$file\n";
+  }
+}
+
+sub format_trailing {
+  for my $f_line (@file_lines) {
+    if ($f_line =~ /^[[:print:]]+(?={$)/ and $' eq '{') {
+      $f_line =~ s/{$/\n\{/g;
+    }
+  }
+}
+
+sub adjust_indent {
+  my $ind_level = 0;
+  my $ind_char = "\t";
+  my $seen_entry = 0;
+  my $lines_length = $#file_lines + 1;
+
+  for (my $i = 0; $i < $lines_length; $i++) {
+    my $f_line = $file_lines[$i];
+
+    if($f_line =~ /^([[:alpha:]]+ main[^{]*$)/mg) {
+      $seen_entry = 1;
+      print "$f_line\n";
+      print "$1\n";
+    }
+    if ($seen_entry == 1) {
+      my $opening_brace;
+      if ($f_line =~ /(^[[:blank:]]*(?={))({)[[:blank:]]*$/mg) {
+        $opening_brace = $2;
+        $f_line = ($ind_char x $ind_level) . $opening_brace;
+        $ind_level++;
+        print "indentation level: $ind_level:$f_line\n";
+      }
+      elsif($f_line !~ /(^[[:blank:]]*(?={))({)[[:blank:]]*$/mg and $f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
+        $f_line = ($ind_char x $ind_level) . $f_line;
+        print "indentation level: $ind_level:$f_line\n";
+      }
+      elsif($f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
+        my $closing_brace = $2;
+        $ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
+        $f_line = ($ind_char x $ind_level) . $closing_brace;
+        print "indentation level: $ind_level:$f_line\n";
+      }
+    }
+    #$file_lines[$i] =~ s/(?<=^) /\t/g
+
+  }
+}
+
 sub multi_parse_and_format {
   my $i;
   my @args = @_;
@@ -80,11 +132,11 @@ sub validate_opt_length {
   printf "args: @_\n";
   print " file opt: $file_opt\n opt list: @opt_list\n opt len : $opt_len\n"
   #if(($opt_len == 3 or $opt_len == 2) and (index (join("",@opt_list),'-') eq 0)) {
-   #handle_opt_error($file_opt);
-   #multi_parse_and_format(1);
-   #eval_file_opt(@opt_list);
-   #print "two parameter argument including options\n";
-   #}
+    #handle_opt_error($file_opt);
+    #multi_parse_and_format(1);
+    #eval_file_opt(@opt_list);
+    #print "two parameter argument including options\n";
+  #}
 }
 
 #END OF SUB-ROUTINES
@@ -97,6 +149,9 @@ if($parameters == 1) {
     exit 1;
   }
   multi_parse_and_format();
+  format_trailing();
+  adjust_indent();
+  print_parsed_lines();
   print "one parameter argument\n";
 }
 elsif($parameters == 2) {
