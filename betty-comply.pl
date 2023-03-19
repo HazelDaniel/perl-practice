@@ -91,7 +91,7 @@ sub adjust_indent {
         print "indentation level: $ind_level:$f_line\n";
       }
       elsif($f_line !~ /(^[[:blank:]]*(?={))({)[[:blank:]]*$/mg and $f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
-        if($f_line =~ /^[[:blank:]]*([[:print:]]+(;|\)))/mg) {
+        if($f_line =~ /^[[:blank:]]*([[:print:]]+(;|\)|:))/mg) {
           $statement = $1;
           $file_lines[$i] = ($ind_char x $ind_level) . $statement;
           print "statement: $statement\n";
@@ -108,9 +108,58 @@ sub adjust_indent {
     else {
       $file_lines[$i] = $f_line;
     }
-    #$file_lines[$i] =~ s/(?<=^) /\t/g
 
   }
+  write_parsed_lines($arg_offset);
+}
+
+sub rm_trailing_wp {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
+  for my $f_line (@file_lines) {
+    if ($f_line =~ /[[:blank:]]*$/ and $' eq '{') {
+      $f_line =~ s/[[:blank:]]*$//m;
+      $file_lines[$l_count] = $f_line;
+    }
+    $l_count++;
+  }
+  write_parsed_lines($arg_offset);
+}
+
+sub separate_RD_tokens {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
+
+  for my $f_line (@file_lines) {
+    if (grep(/[^ ](?:==|!=|<=|>=|<|>|=)[^ ]/,$f_line)) {
+      $f_line =~ s/([^ ])(==|!=|<=|>=|<|>|=)([^ ])/$1 $2 $3/g;
+      $file_lines[$l_count] = $f_line;
+    }
+    if (grep(/[^ ](?:\&\&|\|\|)[^ ]/,$f_line)){
+        print "$1\n";
+        $f_line =~ s/([^ ])(\&\&|\|\|)([^ ])/$1 $2 $3/g;
+    }
+    $l_count++;
+  }
+  write_parsed_lines($arg_offset);
+}
+
+sub format_ctrl_keywords {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
+
+  for my $f_line (@file_lines) {
+    if (grep(/[^ ](?:==|!=|<=|>=|<|>|=)[^ ]/,$f_line)) {
+      $f_line =~ s/([^ ])(==|!=|<=|>=|<|>|=)([^ ])/$1 $2 $3/g;
+      $file_lines[$l_count] = $f_line;
+    }
+    if (grep(/[^ ](?:\&\&|\|\|)[^ ]/,$f_line)){
+        print "$1\n";
+        $f_line =~ s/([^ ])(\&\&|\|\|)([^ ])/$1 $2 $3/g;
+    }
+    $l_count++;
+  }
+
   write_parsed_lines($arg_offset);
 }
 
@@ -181,6 +230,8 @@ if($parameters == 1) {
   format_trailing(0);
   adjust_indent();
   print_parsed_lines();
+  rm_trailing_wp(0);
+    separate_RD_tokens();
   print "one parameter argument\n";
 }
 elsif($parameters == 2) {

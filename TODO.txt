@@ -1,1 +1,6 @@
-1. ability to work with pipes,variable names, and files encountered as arguments
+FILE-PARSER:
+- ability to work with pipes,variable names, and files encountered as arguments
+
+BETTY-COMPLY:
+- support the do-while syntax 
+- skip else statement when formatting trailing curly braces.
