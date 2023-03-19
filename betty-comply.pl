@@ -44,15 +44,33 @@ sub print_parsed_lines {
   }
 }
 
+
+sub write_parsed_lines {
+  my ($arg_offset) = @_;
+  open(FH, '>', $ARGV[$arg_offset]) or die $!;
+  for my $file (@file_lines) {
+    print FH "$file\n";
+  }
+  close(FH);
+  @file_lines = ();
+  update_file_lines($arg_offset);
+}
+
 sub format_trailing {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
   for my $f_line (@file_lines) {
     if ($f_line =~ /^[[:print:]]+(?={$)/ and $' eq '{') {
-      $f_line =~ s/{$/\n\{/g;
+      $f_line =~ s/{$/\n\{/m;
+      $file_lines[$l_count] = $f_line;
     }
+    $l_count++;
   }
+  write_parsed_lines($arg_offset);
 }
 
 sub adjust_indent {
+  my ($arg_offset) = @_;
   my $ind_level = 0;
   my $ind_char = "\t";
   my $seen_entry = 0;
@@ -63,31 +81,37 @@ sub adjust_indent {
 
     if($f_line =~ /^([[:alpha:]]+ main[^{]*$)/mg) {
       $seen_entry = 1;
-      print "$f_line\n";
-      print "$1\n";
     }
     if ($seen_entry == 1) {
       my $opening_brace;
       if ($f_line =~ /(^[[:blank:]]*(?={))({)[[:blank:]]*$/mg) {
         $opening_brace = $2;
-        $f_line = ($ind_char x $ind_level) . $opening_brace;
+        $file_lines[$i] = ($ind_char x $ind_level) . $opening_brace;
         $ind_level++;
         print "indentation level: $ind_level:$f_line\n";
       }
       elsif($f_line !~ /(^[[:blank:]]*(?={))({)[[:blank:]]*$/mg and $f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
-        $f_line = ($ind_char x $ind_level) . $f_line;
-        print "indentation level: $ind_level:$f_line\n";
+        if($f_line =~ /^[[:blank:]]*([[:print:]]+(;|\)))/mg) {
+          $statement = $1;
+          $file_lines[$i] = ($ind_char x $ind_level) . $statement;
+          print "statement: $statement\n";
+          print "indentation level: $ind_level:$f_line\n";
+        }
       }
       elsif($f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
         my $closing_brace = $2;
         $ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
-        $f_line = ($ind_char x $ind_level) . $closing_brace;
+        $file_lines[$i] = ($ind_char x $ind_level) . $closing_brace;
         print "indentation level: $ind_level:$f_line\n";
       }
+    }
+    else {
+      $file_lines[$i] = $f_line;
     }
     #$file_lines[$i] =~ s/(?<=^) /\t/g
 
   }
+  write_parsed_lines($arg_offset);
 }
 
 sub multi_parse_and_format {
@@ -98,6 +122,11 @@ sub multi_parse_and_format {
   for(; $i < $parameters; $i++) {
     parse_and_format($ARGV[$i]);
   }
+}
+
+sub update_file_lines {
+  my ($arg_offset) = @_;
+  multi_parse_and_format($arg_offset);
 }
 
 sub handle_opt_error {
@@ -149,7 +178,7 @@ if($parameters == 1) {
     exit 1;
   }
   multi_parse_and_format();
-  format_trailing();
+  format_trailing(0);
   adjust_indent();
   print_parsed_lines();
   print "one parameter argument\n";
