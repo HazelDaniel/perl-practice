@@ -14,7 +14,7 @@ $parameters = $#ARGV + 1;
 #END OF GLOBALS
 
 #SUB-ROUTINES
-sub parse_and_format {
+sub parse_and_chomp {
   my $args = scalar(@_);
   if($args != 1){
     print "Wrong argument in subroutine!";
@@ -53,18 +53,36 @@ sub write_parsed_lines {
   @file_lines = ();
   update_file_lines($arg_offset);
 }
-
+sub spaces_to_tabs {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
+  for my $file (@file_lines) {
+    if ($file =~ /^( *)([^ ])(.*$)/mg) {
+      $file_lines[$l_count] = $2 . $3;
+    }
+    $l_count++;
+  }
+  write_parsed_lines($arg_offset);
+}
 sub format_trailing {
   my ($arg_offset) = @_;
   my $l_count = 0;
   for my $f_line (@file_lines) {
     if ($f_line =~ /^[[:print:]]+(?={$)/ and $' eq '{') {
-      if(not grep /^\s*((\}?\s*else)|do)\s*\{\s*$/,$f_line) {
-        $f_line =~ s/{$/\n\{/m;
+      if($f_line =~ /^\s*(do)\s*(\{\s*)$/mg) {
+        $f_line = $1 . $2;
         $file_lines[$l_count] = $f_line;
       }
-      elsif($f_line =~ /^\s*((\}?\s*else)|do)\s*\{\s*$/mg) {
-        $f_line =~ s/\{[[:blank:]]*$/\{\n/m;
+      elsif($f_line =~ /^\s*(\})\s*(else)\s*(if\s*\(\s*[[:print:]]+\s*\))?\s*(\{)\s*$/mg) {
+        my $new_opening_brace = $1 . "\n";
+        my $new_closing_brace = "\n" . $4;
+        my $f_line = $new_opening_brace . $2 . " " . $3 . " " . $new_closing_brace;
+        $file_lines[$l_count] = $f_line;
+        #print "an else if block met \"$f_line\"\n";
+      }
+      elsif(not grep /^\s*(do)\s*\{\s*$/,$f_line) {
+        $f_line =~ s/{$/\n\{/m;
+        $file_lines[$l_count] = $f_line;
       }
     }
     $l_count++;
@@ -91,41 +109,45 @@ sub adjust_indent {
         $opening_brace = $2;
         $file_lines[$i] = ($ind_char x $ind_level) . $opening_brace;
         $ind_level++;
-        print "indentation level: $ind_level:$f_line\n";
+        #print "indentation level: $ind_level:$f_line\n";
       }
       elsif($f_line =~ /^\s*(do)\s*(\{)\s*$/mg) {
         my $statement = $1 . " " . $2;
         $file_lines[$i] = ($ind_char x $ind_level) . $statement;
         $ind_level++;
-        print "found a do while or else\n";
-        print "statement: $statement\n";
-        print "indentation level: $ind_level:$f_line\n";
+        #print "found a do while \n";
+        #print "statement: $statement\n";
+        #print "indentation level: $ind_level:$f_line\n";
       }
-      elsif($f_line =~ /\s*(\})\s*(while)\s*([[:graph:]]+;)$/mg) {
-        my $statement = $1 . " " . $2 . " " . $3; 
+      elsif($f_line =~ /\s*(\})\s*(while)\s*(\()\s?([[:graph:]]+)\s?(\);)$/mg) {
+        my $statement = $1 . " " . $2 . " " . $3 . $4 . $5; 
         $ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
         $file_lines[$i] = ($ind_char x $ind_level) . $statement;
-        print "indentation level: $ind_level:$f_line\n";
+        #print "indentation level: $ind_level:$f_line\n";
       }
-      elsif($f_line =~ /^\s*(\})\s*(else)\s*(\{)\s*$/mg) {
+      elsif($f_line =~ /^\s*(else)\s*$/mg) {
         my $statement = $1 . " " . $2 . " " . $3; 
-        $adjust_ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
-        $file_lines[$i] = ($ind_char x $adjust_ind_level) . $statement;
+        #$adjust_ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
+        $file_lines[$i] = ($ind_char x $ind_level) . $statement;
         print "indentation level: $ind_level:$f_line\n";
+        print "else block seen \n";
+      }
+      elsif(0) {
+        
       }
       elsif($f_line !~ /(^[[:blank:]]*(?={))({)[[:blank:]]*$/mg and $f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
         if($f_line =~ /^[[:blank:]]*([[:print:]]+(;|\)|:))/mg) {
           my $statement = $1;
           $file_lines[$i] = ($ind_char x $ind_level) . $statement;
-          print "statement: $statement\n";
-          print "indentation level: $ind_level:$f_line\n";
+          #print "statement: $statement\n";
+          #print "indentation level: $ind_level:$f_line\n";
         }
       }
       elsif($f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
         my $closing_brace = $2;
         $ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
         $file_lines[$i] = ($ind_char x $ind_level) . $closing_brace;
-        print "indentation level: $ind_level:$f_line\n";
+        #print "indentation level: $ind_level:$f_line\n";
       }
     }
     else {
@@ -186,19 +208,19 @@ sub format_ctrl_keywords {
   write_parsed_lines($arg_offset);
 }
 
-sub multi_parse_and_format {
+sub multi_parse_and_chomp {
   my $i;
   my @args = @_;
   my $arg_offset = $args[0];
   $i = $arg_offset ? $i + $arg_offset : 0;
   for(; $i < $parameters; $i++) {
-    parse_and_format($ARGV[$i]);
+    parse_and_chomp($ARGV[$i]);
   }
 }
 
 sub update_file_lines {
   my ($arg_offset) = @_;
-  multi_parse_and_format($arg_offset);
+  multi_parse_and_chomp($arg_offset);
 }
 
 sub handle_opt_error {
@@ -234,7 +256,7 @@ sub validate_opt_length {
   print " file opt: $file_opt\n opt list: @opt_list\n opt len : $opt_len\n"
   #if(($opt_len == 3 or $opt_len == 2) and (index (join("",@opt_list),'-') eq 0)) {
     #handle_opt_error($file_opt);
-    #multi_parse_and_format(1);
+    #multi_parse_and_chomp(1);
     #eval_file_opt(@opt_list);
     #print "two parameter argument including options\n";
   #}
@@ -249,12 +271,13 @@ if($parameters == 1) {
     print "invalid single argument!\n";
     exit 1;
   }
-  multi_parse_and_format();
+  multi_parse_and_chomp(0);
+  spaces_to_tabs(0);
   format_trailing(0);
-  adjust_indent();
-  print_parsed_lines();
+  adjust_indent(0);
+  #print_parsed_lines(0);
   rm_trailing_wp(0);
-    separate_RD_tokens();
+  separate_RD_tokens(0);
   print "one parameter argument\n";
 }
 elsif($parameters == 2) {
@@ -268,13 +291,13 @@ elsif($parameters == 2) {
   validate_opt_length($file_opt, $opt_len, @opt_list);
   if(($opt_len == 3 or $opt_len == 2) and (index (join("",@opt_list),'-') eq 0)) {
     handle_opt_error($file_opt);
-    multi_parse_and_format(1);
+    multi_parse_and_chomp(1);
     eval_file_opt(@opt_list);
     print "two parameter argument including options\n";
   }
   # In cases where they are results of pathname expansions and their names are not preceeded by -
   elsif (not (grep(/^-.*/,$ARGV[0]) or grep (/^-.*/,$ARGV[1]))) {
-    multi_parse_and_format();
+    multi_parse_and_chomp();
     print "pathname expanded";
   }
   else {
@@ -287,7 +310,7 @@ else {
   # ERROR HANDLING
   if(grep (/^((?<=\b)\w[[:graph:]]*\s?)+$/,"@ARGV")) {
     # no options are provided. only pathname expansions or file lists
-    multi_parse_and_format();
+    multi_parse_and_chomp();
     print "multi parameter argument (pathnames only)\n";
 
   }elsif(grep (/^(-[[:alpha:]]{1,2}\s)?((?<=\b)\w[[:graph:]]*\s?)+$/,"@ARGV")) {
@@ -296,7 +319,7 @@ else {
     my @opt_list = split(/(?=[[:graph:]])(?<=[[:graph:]])/,$file_opt);
     $file_name = $ARGV[1];
     my $opt_len = scalar(@opt_list);
-    multi_parse_and_format(1);
+    multi_parse_and_chomp(1);
     eval_file_opt(@opt_list);
     print "multi parameter argument (options provided)\n";
   }
