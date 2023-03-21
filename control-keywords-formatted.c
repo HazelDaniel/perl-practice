@@ -11,23 +11,35 @@ int main()
 					switch (i)
 					{
 						case 0:
-						break;
+						return 0;
+						case 3:
+						return 3;
 						default:
-						continue;
+						return 2;
 					}
 				}
 			} while (0);
 		}
+
 	}
 	else if (0)
 	{
-
+		int a_function(int x)
+		{
+			printf("hello world\n");
+			if (0)
+				printf("i");
+			else if (9)
+				printf("");
+			else
+				printf("k");
+		}
 	}
 	else  
 	{
 		goto end;
 	}
-    
+   
 	end:
 	printf("This program includes all control keywords in C.");
 	return 0;

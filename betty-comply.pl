@@ -90,6 +90,20 @@ sub format_trailing {
   write_parsed_lines($arg_offset);
 }
 
+sub remove_blanks {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
+  for my $f_line (@file_lines) {
+    if ($f_line =~ /(^[^[:graph:]]+$|\n)/mg) {
+      chop($f_line);
+      $file_lines[$l_count] = $f_line;
+    }
+    $l_count++;
+  }
+
+  write_parsed_lines($arg_offset);
+}
+
 sub adjust_indent {
   my ($arg_offset) = @_;
   my $ind_level = 0;
@@ -129,8 +143,8 @@ sub adjust_indent {
         my $statement = $1 . " " . $2 . " " . $3; 
         #$adjust_ind_level = $ind_level - 1 >= 0 ? $ind_level - 1 : 0;
         $file_lines[$i] = ($ind_char x $ind_level) . $statement;
-        print "indentation level: $ind_level:$f_line\n";
-        print "else block seen \n";
+        #print "indentation level: $ind_level:$f_line\n";
+        #print "else block seen \n";
       }
       elsif(0) {
         
@@ -155,6 +169,61 @@ sub adjust_indent {
     }
 
   }
+  write_parsed_lines($arg_offset);
+}
+
+sub no_brace_indent {
+  my ($arg_offset) = @_;
+  my $ind_level = 0;
+  my $ind_char = "\t";
+  my $seen_entry = 0;
+  my $l_count = 0;
+  my $p_line = $l_count - 1 >= 0 ? $file_lines[$l_count - 1] : $file_lines[0];
+  for my $f_line (@file_lines) {
+    if ($f_line =~ /^(\s*)((?:else)?\s?if\s*\(.+\))\s*$/mg) {
+      $ind_level = 0;
+      my $existing_indent = $1;
+      if ($file_lines[$l_count + 1] !~ /^\s*{\s*$/) {
+        $file_lines[$l_count] = $existing_indent . $2;
+        print "indentation level: $ind_level:$f_line\n";
+        $ind_level++;
+        #print "no brace indent on $f_line\n";
+      }
+    }
+    elsif ($f_line =~ /^(\s*)(else)\s*$/mg) {
+      $ind_level = 0;
+      my $existing_indent = $1;
+      my $statement = $2;
+      if ($file_lines[$l_count + 1] !~ /^\s*{\s*$/) {
+        $file_lines[$l_count] = $existing_indent . $statement;
+        print "indentation level: $ind_level:$f_line\n";
+        $ind_level++;
+        #print "no brace indent on $f_line\n";
+      }
+    }
+    elsif($file_lines[$l_count - 1] =~ /(?:^((\s*)(?:else)?\s?if\s*\(.+\))\s*$)/mg) {
+      print "existing indent of parent $2.\n";
+      my $existing_indent = $2;
+      if ($f_line =~ /^[[:blank:]]*([[:print:]]+(;|\)|:))/mg) {
+        my $statement = $1;
+        $file_lines[$l_count] = $existing_indent . ($ind_char x $ind_level) . $statement;
+        #print "statement: $statement\n";
+        print "indentation level: $ind_level:$f_line\n";
+      }
+    }
+    elsif ($file_lines[$l_count - 1] =~ /^(\s*)else\s*$/mg) {
+      print "existing indent of parent $2.\n";
+      my $existing_indent = $1;
+      if ($f_line =~ /^[[:blank:]]*([[:print:]]+(;|\)|:))/mg) {
+        my $statement = $1;
+        $file_lines[$l_count] = $existing_indent . ($ind_char x $ind_level) . $statement;
+        #print "statement: $statement\n";
+        print "indentation level: $ind_level:$f_line\n";
+      }
+    }
+    $l_count++;
+  }
+   
   write_parsed_lines($arg_offset);
 }
 
@@ -278,6 +347,8 @@ if($parameters == 1) {
   #print_parsed_lines(0);
   rm_trailing_wp(0);
   separate_RD_tokens(0);
+  remove_blanks(0);
+  no_brace_indent(0);
   print "one parameter argument\n";
 }
 elsif($parameters == 2) {

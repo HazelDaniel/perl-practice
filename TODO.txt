@@ -4,3 +4,38 @@ FILE-PARSER:
 BETTY-COMPLY:
 - support the do-while syntax 
 - skip else statement when formatting trailing curly braces.
+
+TODO:
+
+support for no-brace indentation:
+	if()
+	  ...
+switch exception for curly brace indentation:
+	switch (...)
+	{
+	case ...:
+	...
+	}
+
+'case' column indentation :
+	case:
+	   ...
+
+'default' column indentation :
+	default:
+	   ...
+
+'break' un-indentation in a 'switch' 'case' 'default'  context :
+	case:
+	   ...
+	   ...
+	   break;
+
+'return' un-indentation in 'case' context:
+	...
+	...
+	return (...)?;
+
+
+ALGORITHMS:
+
