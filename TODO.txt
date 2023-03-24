@@ -1,41 +1,47 @@
 FILE-PARSER:
 - ability to work with pipes,variable names, and files encountered as arguments
 
+|---------------------------------------------------------------------------------------|
+
 BETTY-COMPLY:
-- support the do-while syntax 
-- skip else statement when formatting trailing curly braces.
 
 TODO:
 
-support for no-brace indentation:
-	if()
-	  ...
-switch exception for curly brace indentation:
-	switch (...)
-	{
-	case ...:
-	...
-	}
-
-'case' column indentation :
-	case:
-	   ...
-
-'default' column indentation :
-	default:
-	   ...
-
-'break' un-indentation in a 'switch' 'case' 'default'  context :
-	case:
-	   ...
-	   ...
-	   break;
-
-'return' un-indentation in 'case' context:
-	...
-	...
-	return (...)?;
+un-indentation of 'end' labels (look up the betty docs to be sure that it's only 'end')
+remove trailing whitespaces (or test your previous solution)
+add a blank line after declarations;
+add spaces to the back of commas (if not already included)
+remove spaces between function names and open parentheses
+unpad parentheses
 
 
 ALGORITHMS:
 
+switch exception for curly brace indentation:
+
+we do not need to provide an exception for brace indentation . we only need to adjust the branching keywords in a switch statement to act like a closing curly brace when indenting.
+and also add the ability to create an indent (i.e work like an opening curly brace by un-indenting while working like a closing curly brace by indenting)
+
+
+add a blank line after declarations:
+
+type keywords are a pain in the balls, they could be anywhere in any order
+but here are the few fail-safe cases where they work for all instances
+
+and if they are not in parentheses.
+
+and they are not (preceded by ^ (and they are followed by a opening curly brace)?)
+
+	if they are on the left side of the equality sign
+
+	regex : \s+((?!\()(extern|volatile|int|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$
+
+NOTE: this approach won't work for global definitions by default.
+	one way to add that would be to use the $` variable to capture keywords that may have occurred before our match (the ones not preceded by a space)
+
+	this approach is solely dependent on no-pad parentheses . e.g (x=5) as opposed to ( x = 5)
+	so we need to place this after the unpad_parentheses
+
+
+
+|---------------------------------------------------------------------------------------|

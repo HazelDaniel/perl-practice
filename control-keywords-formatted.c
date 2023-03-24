@@ -1,5 +1,5 @@
 #include <stdio.h>
-int main()
+int main(void)
 {
 	if (1)
 	{
@@ -8,14 +8,17 @@ int main()
 			do {
 				for (int i = 0; i < 1; i++)
 				{
+					int i = 0;
+					float j = i + 1;
+
 					switch (i)
 					{
-						case 0:
-						return 0;
-						case 3:
-						return 3;
-						default:
-						return 2;
+					case 0:
+						return (0);
+					case 3:
+						return (3);
+					default:
+						return (2);
 					}
 				}
 			} while (0);
@@ -39,8 +42,8 @@ int main()
 	{
 		goto end;
 	}
-   
+
 	end:
 	printf("This program includes all control keywords in C.");
-	return 0;
+	return (0);
 }
