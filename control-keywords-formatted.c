@@ -38,12 +38,12 @@ int main(void)
 				printf("k");
 		}
 	}
-	else  
+	else
 	{
 		goto end;
 	}
 
-	end:
+end:
 	printf("This program includes all control keywords in C.");
 	return (0);
 }

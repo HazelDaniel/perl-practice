@@ -149,7 +149,7 @@ sub adjust_indent {
 	  elsif($f_line !~ /(^[[:blank:]]*(?={))({)[[:blank:]]*$/mg and $f_line !~ /(^[[:blank:]]*(?=}))(})[[:blank:]]*$/mg) {
 		if($f_line =~ /^[[:blank:]]*([[:print:]]+(;|\)|:))/mg) {
 		  my $statement = $1;
-		  if (grep(/^\s*(?:(?:case [[:print:]]+|default\s*):)\s*$/,$f_line)) {
+		  if (grep(/^\s*(?:(?:case [[:print:]]+|default\s*|goto\s*|error\s*|end\s*):)\s*$/,$f_line)) {
 			print "a case or default statement found.\n";
 			$file_lines[$i] = ($ind_char x ($ind_level - 1)) . $statement;
 		  }
@@ -166,9 +166,6 @@ sub adjust_indent {
 		$file_lines[$i] = ($ind_char x $ind_level) . $closing_brace;
 		#print "indentation level: $ind_level:$f_line\n";
 	  }
-	}
-	else {
-	  $file_lines[$i] = $f_line;
 	}
 
   }
@@ -234,6 +231,11 @@ sub rm_trailing_wp {
   my ($arg_offset) = @_;
   my $l_count = 0;
   for my $f_line (@file_lines) {
+	if ($f_line =~ /^(.*)(?<!\s)\s+$/mg){
+		$f_line = $1;
+		print  "a trailing whitespace spotted.$f_line\n";
+		$file_lines[$l_count] = $f_line;
+	}
 	if ($f_line =~ /[[:blank:]]*$/ and $' eq '{') {
 	  $f_line =~ s/[[:blank:]]*$//m;
 	  $file_lines[$l_count] = $f_line;
@@ -337,7 +339,7 @@ sub pad_defs {
 
   for my $f_line (@file_lines) {
 	if ($f_line =~ /(\s+(?:(?!\()(?:int|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$)/mg) {
-		if(not grep (/(?:\s+(?:(?!\()(?:int|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$)/,$file_lines[$l_count + 1])) {
+		if(not (grep (/(?:\s+(?:(?!\()(?:int|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$)/,$file_lines[$l_count + 1]) or grep(/^\s*$/,$file_lines[$l_count + 1]))) {
 			$f_line = $` . $1 . "\n";
 			$file_lines[$l_count] = $f_line;
 			print "an unpadded definition. $f_line\n";

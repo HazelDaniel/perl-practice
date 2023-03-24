@@ -25,7 +25,7 @@ if (0)
 printf("i");
 else if (9)
 printf("");
-else
+else       
 printf("k");
 }
 } else {
