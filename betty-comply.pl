@@ -104,6 +104,26 @@ sub remove_blanks {
   write_parsed_lines($arg_offset);
 }
 
+sub format_file {
+  my ($arg_offset) = @_;
+	multi_parse_and_chomp($arg_offset);
+  spaces_to_tabs($arg_offset);
+  format_trailing($arg_offset);
+  adjust_indent($arg_offset);
+  #print_parsed_lines($arg_offset);
+  rm_trailing_wp($arg_offset);
+  separate_RD_tokens($arg_offset);
+  remove_blanks($arg_offset);
+	cast_entry($arg_offset);
+  no_brace_indent($arg_offset);
+	format_ctrl_keywords($arg_offset);
+	wrap_return($arg_offset);
+	unpad_parentheses($arg_offset);
+	pad_defs($arg_offset);
+	rm_wp_btw_fun_n_opn_par($arg_offset);
+
+}
+
 sub adjust_indent {
   my ($arg_offset) = @_;
   my $ind_level = 0;
@@ -114,9 +134,13 @@ sub adjust_indent {
   for (my $i = 0; $i < $lines_length; $i++) {
 	my $f_line = $file_lines[$i];
 
-	if(grep(/^([[:alpha:]]+ main[^{]*$)/,$f_line) or grep (/^(?:\s*(?:(?!\()(?:int|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+ [[:word:]]+\([[:print:]]+\))\s*$/,$f_line)) {
+	if(grep(/^([[:alpha:]]+ main[^{]*$)/,$f_line)) {
 		print "seen entry\n";
 	  $seen_entry = 1;
+	}
+	if(grep (/^(?:\s*(?:(?!\()(?:int|uint32_t|uint16_t|uint8_t|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int32_t|int64_t|int_least8_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|uint_fast8_t|uint_fast16_t|uint_fast32_t|uint_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+ [[:word:]]+\s*\([[:print:]]+\))\s*$/,$f_line)) {
+		print "seen function entry \n";
+		$seen_entry = 1;
 	}
 	if ($seen_entry == 1) {
 	  my $opening_brace;
@@ -339,13 +363,29 @@ sub pad_defs {
   my $l_count = 0;
 
   for my $f_line (@file_lines) {
-	if ($f_line =~ /(\s+(?:(?!\()(?:int|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$)/mg) {
-		if(not (grep (/(?:\s+(?:(?!\()(?:int|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$)/,$file_lines[$l_count + 1]) or grep(/^\s*$/,$file_lines[$l_count + 1]))) {
+	if ($f_line =~ /(\s+(?:(?!\()(?:int|uint32_t|uint16_t|uint8_t|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int32_t|int64_t|int_least8_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|uint_fast8_t|uint_fast16_t|uint_fast32_t|uint_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$)/mg) {
+		if(not (grep (/(?:\s+(?:(?!\()(?:int|uint32_t|uint16_t|uint8_t|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int32_t|int64_t|int_least8_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|uint_fast8_t|uint_fast16_t|uint_fast32_t|uint_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$)/,$file_lines[$l_count + 1]) or grep(/^\s*$/,$file_lines[$l_count + 1]))) {
 			$f_line = $` . $1 . "\n";
 			$file_lines[$l_count] = $f_line;
 			print "an unpadded definition. $f_line\n";
 		}
 	}
+	$l_count++;
+  }
+
+  write_parsed_lines($arg_offset);
+}
+
+sub rm_wp_btw_fun_n_opn_par {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
+
+  for my $f_line (@file_lines) {
+		if ($f_line =~ /^\s*((?:(?!\()(?:int|uint32_t|uint16_t|uint8_t|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int32_t|int64_t|int_least8_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|uint_fast8_t|uint_fast16_t|uint_fast32_t|uint_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+ [[:word:]]+)\s+(\([[:print:]]+\))\s*$/mg) {
+			$f_line = $1 . $2;
+			$file_lines[$l_count] = $f_line;
+			print "an tokens here are .$1\n$2 \n and \n$3\n";
+		}
 	$l_count++;
   }
 
@@ -415,20 +455,7 @@ if($parameters == 1) {
 	print "invalid single argument!\n";
 	exit 1;
   }
-  multi_parse_and_chomp(0);
-  spaces_to_tabs(0);
-  format_trailing(0);
-  adjust_indent(0);
-  #print_parsed_lines(0);
-  rm_trailing_wp(0);
-  separate_RD_tokens(0);
-  remove_blanks(0);
-	cast_entry(0);
-  no_brace_indent(0);
-	format_ctrl_keywords(0);
-	wrap_return(0);
-	unpad_parentheses(0);
-	pad_defs(0);
+	format_file(0);
   print "one parameter argument\n";
 }
 elsif($parameters == 2) {
