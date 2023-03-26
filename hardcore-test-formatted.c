@@ -1,4 +1,5 @@
 #include <stdio.h>
+
 int main(void)
 {
 	if (1)
@@ -24,19 +25,6 @@ int main(void)
 			} while (0);
 		}
 
-	}
-	else if (0)
-	{
-		int a_function(int x)
-		{
-			printf("hello world\n");
-			if (0)
-				printf("i");
-			else if (9)
-				printf("");
-			else
-				printf("k");
-		}
 	}
 	else
 	{

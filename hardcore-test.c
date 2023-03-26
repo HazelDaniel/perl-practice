@@ -1,5 +1,6 @@
 #include <stdio.h>
-int main(){
+
+int main (){
 if( 1){
 while( 0 ){
 do {
@@ -18,17 +19,8 @@ return 2;
 } while(0);
 }
  
-} else if(0) {
-int a_function(int x ) {
-printf("hello world\n");
-if (0)
-printf("i");
-else if (9)
-printf("");
-else       
-printf("k");
-}
-} else {
+} 
+else{
 goto end;
 }
 
@@ -40,10 +32,10 @@ return 0;
 int largest_number (int a, int b, int c){
 int largest;
 
-if (a > b && a > c){
+if (a>b&&a>c){
 largest = a;
 }
-else if (b > a && b > c)
+else if (b>a&&b>c)
 {
 largest = b;
 }

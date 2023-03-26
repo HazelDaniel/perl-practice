@@ -19,6 +19,7 @@ this is a not-fully tested regex for function declarations:
 functions can also have one of these specifiers :
 	inline , _Noreturn, and/or one of the storage class specifiers extern or static
 so, add them
+unwrap if-else branches in the same indentation level if they all have just a single line
 
 ALGORITHMS:
 

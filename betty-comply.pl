@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 use Term::ANSIColor qw(:constants);
+use v5;
 
 =for
 ====== WELCOME TO MY LITTLE PROJECT! ======
@@ -11,6 +12,7 @@ $parameters = $#ARGV + 1;
 @file_lines = ();
 %f_property = ('nu',"numbered-and-upper",'nl',"numbered-and-lower",'n',"numbered",'u',"upper",'l',"lower");
 %f_long_property = ('--stop-at='=>"set-stop",'--offset='=>"set-offset");
+$REMOVAL_PLACEHOLDER = "BC<reserved>";
 #END OF GLOBALS
 
 #SUB-ROUTINES
@@ -47,7 +49,7 @@ sub write_parsed_lines {
   my ($arg_offset) = @_;
   open(FH, '>', $ARGV[$arg_offset]) or die $!;
   for my $file (@file_lines) {
-	print FH "$file\n";
+	print FH "$file\n" unless $file =~ /^.*BC<reserved>.*$/;
   }
   close(FH);
   @file_lines = ();
@@ -90,19 +92,6 @@ sub format_trailing {
   write_parsed_lines($arg_offset);
 }
 
-sub remove_blanks {
-  my ($arg_offset) = @_;
-  my $l_count = 0;
-  for my $f_line (@file_lines) {
-	if ($f_line =~ /(^[^[:graph:]]+$|\n)/mg) {
-	  chop($f_line);
-	  $file_lines[$l_count] = $f_line;
-	}
-	$l_count++;
-  }
-
-  write_parsed_lines($arg_offset);
-}
 
 sub format_file {
   my ($arg_offset) = @_;
@@ -121,6 +110,7 @@ sub format_file {
 	unpad_parentheses($arg_offset);
 	pad_defs($arg_offset);
 	rm_wp_btw_fun_n_opn_par($arg_offset);
+	brace_unbraced_ifelse_if_needed($arg_offset);
 
 }
 
@@ -258,7 +248,7 @@ sub rm_trailing_wp {
   for my $f_line (@file_lines) {
 	if ($f_line =~ /^(.*)(?<!\s)\s+$/mg){
 		$f_line = $1;
-		print  "a trailing whitespace spotted.$f_line\n";
+		#print  "a trailing whitespace spotted.$f_line\n";
 		$file_lines[$l_count] = $f_line;
 	}
 	if ($f_line =~ /[[:blank:]]*$/ and $' eq '{') {
@@ -280,7 +270,7 @@ sub separate_RD_tokens {
 	  $file_lines[$l_count] = $f_line;
 	}
 	if (grep(/[^ ](?:\&\&|\|\|)[^ ]/,$f_line)){
-		print "$1\n";
+		#print "$1\n";
 		$f_line =~ s/([^ ])(\&\&|\|\|)([^ ])/$1 $2 $3/g;
 	}
 	$l_count++;
@@ -294,7 +284,7 @@ sub format_ctrl_keywords {
 
   for my $f_line (@file_lines) {
 	if ($f_line =~ /^(\s*)((?:else)?\s*if|for|while|switch)(\(.*\))\s*$/mg) {
-	  print "an unseparated control keyword spotted.\n";
+	  #print "an unseparated control keyword spotted.\n";
 	  $f_line = $1 . $2 . " " . $3;
 	  $file_lines[$l_count] = $f_line;
 	}
@@ -310,7 +300,7 @@ sub cast_entry {
 
   for my $f_line (@file_lines) {
 		if ($f_line =~ /^(void|int)\s*(main)\s*\(\s*\)\s*$/){
-			print "an uncasted entry point spotted.\n";
+		#	print "an uncasted entry point spotted.\n";
 			$f_line = $1 . " " . $2 .  "(void)";
 			$file_lines[$l_count] = $f_line;
 		}
@@ -328,7 +318,7 @@ sub wrap_return {
 	if ($f_line =~ /^(\s*)(return)\s*(?!\()(?<= )(?! )(.+);$/mg) {
 		$f_line = $1 . $2 . " " . "(" . $3 . ")" . ";";
 		$file_lines[$l_count] = $f_line;
-	  print "an unwrapped return value spotted. $f_line\n";
+	  #print "an unwrapped return value spotted. $f_line\n";
 	}
 	$l_count++;
   }
@@ -344,12 +334,12 @@ sub unpad_parentheses {
 	if ($f_line =~ /(\()\s+([[:print:]]+)(\))/mg) {
 		$f_line = $` . $1 . $2 .  $3 . $';
 		$file_lines[$l_count] = $f_line;
-	  print "a padded left parentheses spotted. $f_line\n";
+	  #print "a padded left parentheses spotted. $f_line\n";
 	}
 	if ($f_line =~ /(\()([[:print:]]+)\s+(\))/mg) {
 		$f_line = $` . $1 . $2 .  $3 . $';
 		$file_lines[$l_count] = $f_line;
-	  print "a padded right parentheses spotted. $f_line\n";
+		#print "a padded right parentheses spotted. $f_line\n";
 	}
 	$l_count++;
   }
@@ -367,7 +357,7 @@ sub pad_defs {
 		if(not (grep (/(?:\s+(?:(?!\()(?:int|uint32_t|uint16_t|uint8_t|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int32_t|int64_t|int_least8_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|uint_fast8_t|uint_fast16_t|uint_fast32_t|uint_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+[[:print:]]*;$)/,$file_lines[$l_count + 1]) or grep(/^\s*$/,$file_lines[$l_count + 1]))) {
 			$f_line = $` . $1 . "\n";
 			$file_lines[$l_count] = $f_line;
-			print "an unpadded definition. $f_line\n";
+		#	print "an unpadded definition. $f_line\n";
 		}
 	}
 	$l_count++;
@@ -384,12 +374,101 @@ sub rm_wp_btw_fun_n_opn_par {
 		if ($f_line =~ /^\s*((?:(?!\()(?:int|uint32_t|uint16_t|uint8_t|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int32_t|int64_t|int_least8_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|uint_fast8_t|uint_fast16_t|uint_fast32_t|uint_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+ [[:word:]]+)\s+(\([[:print:]]+\))\s*$/mg) {
 			$f_line = $1 . $2;
 			$file_lines[$l_count] = $f_line;
-			print "an tokens here are .$1\n$2 \n and \n$3\n";
+		#	print "an tokens here are .$1\n$2 \n and \n$3\n";
 		}
 	$l_count++;
   }
 
   write_parsed_lines($arg_offset);
+}
+
+sub brace_unbraced_ifelse_if_needed {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
+	my %if_pts = (
+	);
+
+  for my $f_line (@file_lines) {
+		if ($f_line =~ /^(\s+)if\s+\([[:print:]]+\)\s*$/m) {
+			print "if line: \t $f_line \n";
+			my $indent_level = length($1);
+			$if_pts{"$l_count"} = [$indent_level,$f_line];
+		}
+	$l_count++;
+  }
+
+	foreach $key (keys %if_pts) {
+	#	print "line: $key \n statements:\n";
+		my @val  = @{$if_pts{$key}}; 
+		my ($indent_level,$line) = @val;
+		my @branch_pts = ();
+		my $seen_wrapped = 0;
+		my @wrapped_branch_pts = ();
+		my @unwrapped_branch_pts = ();
+		my $ind_char = "\t" x $indent_level;
+		my $b_count = $key;
+
+		push(@branch_pts,$b_count);
+		print  "b count : $b_count \t file lines : $#file_lines\n";
+
+		for (; $b_count <= $#file_lines; $b_count++) {
+			print "going through the file lines\n";
+			if ($file_lines[$b_count] =~ /^(\s+)((?:else\s)?if \([[:print:]]+\)|else)\s*$/m) {
+				$b_ind_level = length($1);
+				print "branch indent level : $b_ind_level\t statement: $file_lines[$b_count]\n";
+				if ($b_ind_level >= $indent_level and not ($b_ind_level == $indent_level && grep(/^\s+((?:for|if|while|switch)\s+\([[:print:]]+\)|do\s*{)\s*$/,$file_lines[$b_count]))) {
+				if(grep(/^\s+(else(?:\s+if\s+\([[:print:]]+\))?)\s*$/),$file_lines[$b_count] and $b_ind_level == $indent_level) {
+						print "branch found: $file_lines[$b_count]\t indent level: $b_ind_level\n";
+						push(@branch_pts,$b_count);
+				}
+				}
+				else {
+			#		last;
+				}
+			}
+		}
+
+
+		for my $b_point (@branch_pts) {
+			if(grep(/^\s+\{\s*$/,$file_lines[$b_point + 1])) {
+				#print "a wrapped branch found next to : $file_lines[$b_point] \t and it's $file_lines[$b_point + 1]\n";
+				$seen_wrapped = 1;
+				last;
+			}
+		}
+
+		if ($seen_wrapped == 1) {
+			for my $b_point (@branch_pts) { 
+				#print "branch points: \n\t $file_lines[$b_point]\n";
+				if(grep(/^\s+\{\s*$/,$file_lines[$b_point + 1])) {
+					push(@wrapped_branch_pts,$b_point);
+				}
+			}
+		}
+
+		for my $b_point (@branch_pts) {
+			if(not grep(/^$b_point$/,@wrapped_branch_pts)) {
+				print "unwrapped $file_lines[$b_point]\n";
+				push(@unwrapped_branch_pts,$b_point);
+			}
+		}
+
+		for my $ub_point (@unwrapped_branch_pts) {
+			my $wrapped =   $file_lines[$ub_point] . "\n" . $ind_char . "{" .  "\n" . $file_lines[$ub_point + 1] . "\n" . $ind_char . "}"; 
+			$file_lines[$ub_point] = $wrapped;
+			$file_lines[$ub_point + 1] = "$REMOVAL_PLACEHOLDER";
+			print "unwrapped: $file_lines[$ub_point]\n";
+		}
+
+		for my $wb_point (@wrapped_branch_pts) {
+			print "wrapped: $file_lines[$wb_point]\n";
+		}
+
+
+	}
+
+  write_parsed_lines($arg_offset);
+	
 }
 
 sub multi_parse_and_chomp {
@@ -534,6 +613,29 @@ else {
   }
 }
 
+sub remove_blanks {
+  my ($arg_offset) = @_;
+  my $l_count = 0;
+
+  for my $f_line (@file_lines) {
+		if ($f_line =~ /(^\s*$)/mg) {
+			if (not grep (/^#/,$file_lines[$l_count - 1])) {
+
+			if(not grep(/^([[:alpha:]]+ main[^{]*$)/,$file_lines[$l_count + 1])) {
+				if( not grep (/^(?:\s*(?:(?!\()(?:int|uint32_t|uint16_t|uint8_t|float|double|char|short|long long|long double|long|signed|_Bool|bool|enum|unsigned|void|complex|_Complex|size_t|time_t|FILE|fpos_t|va_list|jmp_buf|wchar_t|wint_t|wctype_t|mbstate_t|div_t|ldiv_t|imaxdiv_t|int8_t|int16_t|int32_t|int64_t|int_least8_t|int_least16_t|int_least32_t|int_least64_t|uint_least8_t|uint_least16_t|uint_least32_t|uint_least64_t|int_fast8_t|int_fast16_t|int_fast32_t|int_fast64_t|uint_fast8_t|uint_fast16_t|uint_fast32_t|uint_fast64_t|intptr_t|uintptr_t)\s*(?!\)))+ [[:word:]]+\s*\([[:print:]]+\))\s*$/,$file_lines[$l_count + 1])) {
+					$f_line = $REMOVAL_PLACEHOLDER;
+					$file_lines[$l_count] = $f_line;
+				}
+			}
+
+			}
+
+		}
+		$l_count++;
+  }
+
+  write_parsed_lines($arg_offset);
+}
 
 =for
 
